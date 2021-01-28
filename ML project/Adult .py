@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 import pandas as pd
@@ -11,27 +11,27 @@ import seaborn as sns
 get_ipython().run_line_magic('matplotlib', 'inline')
 
 
-# In[ ]:
+# In[2]:
 
 
 df = pd.read_csv('adult.csv')
 df.head()
 
 
-# In[ ]:
+# In[3]:
 
 
 df.shape
 
 
-# In[ ]:
+# In[4]:
 
 
 df.groupby(['education','income'])['income'].count().unstack().plot(kind='bar')
 plt.xlabel("");
 
 
-# In[ ]:
+# In[5]:
 
 
 money_education = df.groupby(['education','income'])['income'].count().unstack()
@@ -39,14 +39,14 @@ money_education['ratio'] = money_education['>50K']/money_education.sum(axis=1)
 money_education.sort_values('ratio',ascending=False).ratio.plot(kind='bar');
 
 
-# In[ ]:
+# In[6]:
 
 
 for i in ['workclass','marital.status','occupation','relationship','race','sex']:
     df.groupby([i,'income'])['income'].count().unstack().plot(kind='bar')
 
 
-# In[ ]:
+# In[7]:
 
 
 clean_df = df.copy()
@@ -57,19 +57,19 @@ sns.heatmap(clean_df.isnull(),cmap='binary_r',cbar=False);
 
 # There are some columns with null values, plus, as expected, workclass and occupation show the same null values pattern. Let's see the percentage of these values versus the overall data and evaluate whether they can be dropped
 
-# In[ ]:
+# In[8]:
 
 
 clean_df.occupation.isnull().sum()/clean_df.shape[0]*100
 
 
-# In[ ]:
+# In[9]:
 
 
 clean_df.workclass.isnull().sum()/clean_df.shape[0]*100
 
 
-# In[ ]:
+# In[10]:
 
 
 clean_df['native.country'].isna().sum()/clean_df.shape[0]*100
@@ -77,87 +77,87 @@ clean_df['native.country'].isna().sum()/clean_df.shape[0]*100
 
 # Looks like they can be dropped
 
-# In[ ]:
+# In[11]:
 
 
 clean_df.dropna(axis=1,inplace=True)
 clean_df.isnull().sum()
 
 
-# In[ ]:
+# In[12]:
 
 
 clean_df.drop('fnlwgt',axis=1,inplace=True)
 
 
-# In[ ]:
+# In[13]:
 
 
 from sklearn.preprocessing import StandardScaler, RobustScaler
 
 
-# In[ ]:
+# In[14]:
 
 
 standard_scaler = StandardScaler()
 clean_df[clean_df.select_dtypes('int64').columns] = standard_scaler.fit_transform(clean_df[clean_df.select_dtypes('int64').columns])
 
 
-# In[ ]:
+# In[15]:
 
 
 print('Example mean after standardization: {:.2f}'.format(clean_df.iloc[:,0].mean()))
 print('Example std after standardization: {:.2f}'.format(clean_df.iloc[:,0].std()))
 
 
-# In[ ]:
+# In[16]:
 
 
 clean_df['income'] = clean_df.income.str.replace('<=50K','0').str.replace('>50K','1').astype(int)
 
 
-# In[ ]:
+# In[17]:
 
 
 sns.heatmap(clean_df.corr(),cmap='CMRmap');
 
 
-# In[ ]:
+# In[18]:
 
 
 clean_df.columns
 
 
-# In[ ]:
+# In[19]:
 
 
 from pandas.plotting import scatter_matrix
-scatter_matrix(clean_df[['age','capital.loss','capital.gain','income']],figsize=(10,10));
+scatter_matrix(clean_df[['age','capital.loss','capital.gain']],figsize=(10,10));
 
 
-# The correlation between numerical features seems to be weak
+# The correlation among numerical features seems to be weak
 
-# In[ ]:
+# In[20]:
 
 
 clean_df.drop('education',axis=1,inplace=True)
 
 
-# In[ ]:
+# In[21]:
 
 
 df_new = pd.get_dummies(clean_df)
 df_new.head()
 
 
-# In[ ]:
+# In[22]:
 
 
 plt.figure(figsize=(10,8))
 sns.heatmap(df_new.corr(),cmap='RdBu');
 
 
-# In[ ]:
+# In[23]:
 
 
 X = df_new.drop('income',axis=1).values
@@ -166,79 +166,21 @@ y = df_new.income.values
 
 # # KNeighborsClassifier
 
-# In[ ]:
+# In[24]:
 
 
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import balanced_accuracy_score, f1_score
 
 
-# In[ ]:
+# In[25]:
 
 
 X_train, X_test, y_train, y_test = train_test_split(X,y,shuffle=True,test_size=0.2,random_state=8)
 
 
-# In[ ]:
-
-
-params = {'algorithm':['auto','brute','kd_tree'],
-          'weights' : ['uniform','distance'],
-          'n_neighbors' : [i for i in range(1,11)]}
-
-knc = KNeighborsClassifier()
-model = GridSearchCV(estimator = knc, param_grid = params, cv=10, n_jobs=-1, scoring='balanced_accuracy')
-model.fit(X_train,y_train)
-
-
-# In[ ]:
-
-
-print('best_params: ',model.best_params_)
-print('best_score: ',model.best_score_)
-
-
-# In[ ]:
-
-
-preds = model.predict(X_test)
-
-
-# In[ ]:
-
-
-preds_proba = model.predict_proba(X_test)
-
-
-# In[ ]:
-
-
-balanced_accuracy_score(y_test,preds)
-
-
-# In[ ]:
-
-
-from sklearn.metrics import roc_auc_score, roc_curve
-fpr, tpr, tresholds = roc_curve(y_test,preds_proba[:,1])
-auc_score = roc_auc_score(y_test,preds_proba[:,1])
-
-
-# In[ ]:
-
-
-plt.figure(figsize=(5,5))
-plt.plot([0,1],'k--')
-plt.plot(fpr,tpr,'r')
-plt.title('KNeighborsClassifier ROC with GridSearchCV')
-plt.xlabel('fpr')
-plt.ylabel('tpr')
-plt.annotate('AUC = {:.2f}'.format(auc_score),xy=(0.6,0.2));
-
-
-# In[ ]:
+# In[26]:
 
 
 acc_test = []
@@ -252,7 +194,7 @@ for k in (range(1,17)):
     acc_train.append(balanced_accuracy_score(y_train,pred_knn_train))
 
 
-# In[ ]:
+# In[27]:
 
 
 plt.plot(range(1,17), acc_test, 'p-', label='test')
@@ -264,13 +206,13 @@ plt.ylabel('Balanced accuracy')
 plt.title('Train vs Test balanced accuracy',{'fontsize':15});
 
 
-# In[ ]:
+# In[28]:
 
 
 from sklearn.metrics import roc_auc_score, roc_curve
 
 
-# In[ ]:
+# In[29]:
 
 
 knc = KNeighborsClassifier(n_neighbors=15)
@@ -281,7 +223,7 @@ fpr_k_15, tpr_k_15, tresholds_k_15 = roc_curve(y_test,preds_prob_k_15)
 auc_score_k_15 = roc_auc_score(y_test,preds_prob_k_15)
 
 
-# In[ ]:
+# In[30]:
 
 
 plt.figure(figsize=(5,5))
@@ -295,14 +237,14 @@ plt.annotate('AUC = {:.2f}'.format(auc_score_k_15),xy=(0.6,0.2));
 
 # # DecisionTreeClassifier
 
-# In[ ]:
+# In[31]:
 
 
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import GridSearchCV
 
 
-# In[ ]:
+# In[32]:
 
 
 dt = DecisionTreeClassifier()
@@ -316,44 +258,44 @@ tree_model = GridSearchCV(estimator=dt, param_grid=params, cv = 10, n_jobs=-1,sc
 tree_model.fit(X_train,y_train)
 
 
-# In[ ]:
+# In[33]:
 
 
 print('best_params:',tree_model.best_params_)
 print('best_score: ',tree_model.best_score_)
 
 
-# In[ ]:
+# In[34]:
 
 
 tree_preds = tree_model.predict(X_test)
 
 
-# In[ ]:
+# In[35]:
 
 
 tree_preds_prob = tree_model.predict_proba(X_test)[:,1]
 
 
-# In[ ]:
+# In[36]:
 
 
 print('Balanced accuracy: {:.2f}'.format(balanced_accuracy_score(y_test,tree_preds)))
 
 
-# In[ ]:
+# In[37]:
 
 
 fpr_tree, tpr_tree, tresholds_tree = roc_curve(y_test,tree_preds_prob)
 
 
-# In[ ]:
+# In[38]:
 
 
 auc_score_tree = roc_auc_score(y_test,tree_preds_prob)
 
 
-# In[ ]:
+# In[39]:
 
 
 plt.figure(figsize=(5,5))
@@ -367,21 +309,21 @@ plt.annotate('AUC = {:.2f}'.format(auc_score_tree),xy=(0.6,0.2));
 
 # ## LogisticRegression
 
-# In[ ]:
+# In[40]:
 
 
 from sklearn.linear_model import LogisticRegression
 
 
-# In[ ]:
+# In[41]:
 
 
 df_new.corr()['income'][(df_new.corr()['income']>0.3) | (df_new.corr()['income']<-0.3)]
 
 
-# Above the fetures that are linearlly correlated the most with income
+# Above the fetures that are linearlly correlated with income the most 
 
-# In[ ]:
+# In[42]:
 
 
 X_logr = df_new.drop('income',axis=1).values
@@ -390,7 +332,7 @@ y_logr = df_new['income']
 X_train_lr, X_test_lr, y_train_lr, y_test_lr = train_test_split(X_logr,y_logr,test_size=0.2,random_state=6)
 
 
-# In[ ]:
+# In[43]:
 
 
 logr = LogisticRegression()
@@ -399,14 +341,14 @@ preds_logr = logr.predict(X_test_lr)
 preds_prob_logr =logr.predict_proba(X_test_lr)[:,1]
 
 
-# In[ ]:
+# In[44]:
 
 
 fpr_log, tpr_log, tresholds_log = roc_curve(y_test_lr,preds_prob_logr)
 auc_score_log = roc_auc_score(y_test_lr,preds_prob_logr)
 
 
-# In[ ]:
+# In[45]:
 
 
 plt.figure(figsize=(5,5))
@@ -420,13 +362,13 @@ plt.annotate('AUC = {:.2f}'.format(auc_score_log),xy=(0.6,0.2));
 
 # ## Ensemble method: Random Forests
 
-# In[ ]:
+# In[46]:
 
 
 from sklearn.ensemble import RandomForestClassifier
 
 
-# In[ ]:
+# In[47]:
 
 
 rf = RandomForestClassifier(n_estimators=200)
@@ -435,20 +377,20 @@ rf_preds=rf.predict(X_test)
 rf_pred_probs = rf.predict_proba(X_test)[:,1]
 
 
-# In[ ]:
+# In[48]:
 
 
 balanced_accuracy_score(y_test,rf_preds)
 
 
-# In[ ]:
+# In[49]:
 
 
 fpr_rf, tpr_rf, tresholds_rf = roc_curve(y_test,rf_pred_probs)
 auc_score_rf = roc_auc_score(y_test,rf_pred_probs)
 
 
-# In[ ]:
+# In[50]:
 
 
 plt.figure(figsize=(5,5))
@@ -462,7 +404,7 @@ plt.annotate('AUC = {:.2f}'.format(auc_score_rf),xy=(0.6,0.2));
 
 # ### Features importances in RandomForest
 
-# In[ ]:
+# In[51]:
 
 
 pd.DataFrame(rf.feature_importances_, index=df_new.drop('income',axis=1).columns).sort_values(by=0).plot(kind='barh')
@@ -471,7 +413,7 @@ plt.legend("");
 
 # ## Comparing ROC - AUC of all models
 
-# In[ ]:
+# In[52]:
 
 
 plt.figure(figsize=(5,5))
